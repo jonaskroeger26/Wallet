@@ -6,7 +6,6 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
-  VersionedTransaction,
   clusterApiUrl,
 } from "@solana/web3.js";
 import {
@@ -34,7 +33,6 @@ import {
 import { fetchSplTokenRows, loadJupiterTokenMap } from "./lib/tokens";
 import type { ParsedTokenRow } from "./lib/tokens";
 import { sendSplToken } from "./lib/spl-transfer";
-import { getQuote, getSwapTransaction, NATIVE_MINT_STR } from "./lib/jupiter";
 import {
   loadAddressBook,
   saveAddressBook,
@@ -45,6 +43,7 @@ import { fetchNftsHelius } from "./lib/nfts";
 import type { Cluster } from "./lib/cluster";
 import { WalletShell, type ShellTab } from "./components/WalletShell";
 import { PortfolioHero } from "./components/PortfolioHero";
+import { SwapPanel } from "./components/SwapPanel";
 
 const RPC: Record<Cluster, string> = {
   devnet: import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim() || clusterApiUrl("devnet"),
@@ -87,13 +86,6 @@ export function App() {
   const [splMint, setSplMint] = useState("");
   const [splDest, setSplDest] = useState("");
   const [splAmount, setSplAmount] = useState("");
-
-  const [swapInMint, setSwapInMint] = useState(NATIVE_MINT_STR);
-  const [swapOutMint, setSwapOutMint] = useState("");
-  const [swapAmount, setSwapAmount] = useState("");
-  const [swapSlippageBps, setSwapSlippageBps] = useState(100);
-  const [swapQuote, setSwapQuote] = useState<Record<string, unknown> | null>(null);
-  const [swapBusy, setSwapBusy] = useState(false);
 
   const [addressBook, setAddressBook] = useState<AddressBookEntry[]>(() =>
     loadAddressBook()
@@ -340,7 +332,6 @@ export function App() {
     setBalanceLamports(null);
     setTokenRows([]);
     setActivity([]);
-    setSwapQuote(null);
     setPendingMnemonic(null);
     setStatus(null);
     setError(null);
@@ -469,88 +460,6 @@ export function App() {
       await refreshBalance();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  async function handleQuote() {
-    if (!keypair) return;
-    setError(null);
-    setStatus(null);
-    setSwapQuote(null);
-    if (cluster !== "mainnet-beta") {
-      setError("Jupiter swap uses mainnet liquidity. Switch network to Mainnet-beta.");
-      return;
-    }
-    let inputMint: string;
-    let outputMint: string;
-    try {
-      inputMint = new PublicKey(swapInMint.trim()).toBase58();
-      outputMint = new PublicKey(swapOutMint.trim()).toBase58();
-    } catch {
-      setError("Invalid mint addresses.");
-      return;
-    }
-    const human = Number(swapAmount);
-    if (!Number.isFinite(human) || human <= 0) {
-      setError("Enter a valid amount (human units, e.g. SOL).");
-      return;
-    }
-    let amountRaw: string;
-    if (inputMint === NATIVE_MINT_STR) {
-      amountRaw = String(Math.floor(human * LAMPORTS_PER_SOL));
-    } else {
-      const map = await loadJupiterTokenMap();
-      const meta = map.get(inputMint);
-      if (!meta) {
-        setError("Unknown input mint — add a token that appears on Jupiter’s list.");
-        return;
-      }
-      amountRaw = String(BigInt(Math.floor(human * 10 ** meta.decimals)));
-    }
-    setSwapBusy(true);
-    try {
-      const q = await getQuote({
-        inputMint,
-        outputMint,
-        amount: amountRaw,
-        slippageBps: swapSlippageBps,
-      });
-      setSwapQuote(q);
-      setStatus("Quote ready — review and confirm swap.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSwapBusy(false);
-    }
-  }
-
-  async function handleSwapConfirm() {
-    if (!keypair || !swapQuote) return;
-    setError(null);
-    setStatus(null);
-    setSwapBusy(true);
-    try {
-      const { swapTransaction } = await getSwapTransaction(
-        swapQuote,
-        keypair.publicKey.toBase58()
-      );
-      const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
-      tx.sign([keypair]);
-      const sig = await connection.sendRawTransaction(tx.serialize());
-      const latest = await connection.getLatestBlockhash();
-      await connection.confirmTransaction({
-        signature: sig,
-        blockhash: latest.blockhash,
-        lastValidBlockHeight: latest.lastValidBlockHeight,
-      });
-      setStatus(`Swap submitted. Signature: ${sig}`);
-      setSwapQuote(null);
-      await refreshBalance();
-      await refreshTokens();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSwapBusy(false);
     }
   }
 
@@ -942,72 +851,20 @@ export function App() {
             </div>
           )}
 
-          {tab === "swap" && (
-            <div className="card stack">
-              <p className="hint" style={{ margin: 0 }}>
-                Jupiter aggregates mainnet liquidity. Use <strong>Mainnet-beta</strong> and real SOL.
-              </p>
-              <div className="field">
-                <label htmlFor="inMint">Input mint</label>
-                <input
-                  id="inMint"
-                  className="mono"
-                  value={swapInMint}
-                  onChange={(e) => setSwapInMint(e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="outMint">Output mint</label>
-                <input
-                  id="outMint"
-                  className="mono"
-                  value={swapOutMint}
-                  onChange={(e) => setSwapOutMint(e.target.value)}
-                  placeholder="Token mint"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="swapAmt">Amount (SOL units if input is native mint)</label>
-                <input
-                  id="swapAmt"
-                  inputMode="decimal"
-                  value={swapAmount}
-                  onChange={(e) => setSwapAmount(e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="slip">Slippage (basis points)</label>
-                <input
-                  id="slip"
-                  type="number"
-                  min={1}
-                  max={5000}
-                  value={swapSlippageBps}
-                  onChange={(e) => setSwapSlippageBps(Number(e.target.value) || 100)}
-                />
-              </div>
-              <div className="btn-group btn-group--stretch">
-                <button type="button" disabled={swapBusy} onClick={() => void handleQuote()}>
-                  {swapBusy ? "…" : "Quote"}
-                </button>
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={swapBusy || !swapQuote}
-                  onClick={() => void handleSwapConfirm()}
-                >
-                  Swap
-                </button>
-              </div>
-              {swapQuote && (
-                <details open>
-                  <summary>Raw quote</summary>
-                  <div className="details-body">
-                    <pre className="mono quote-pre">{JSON.stringify(swapQuote, null, 2)}</pre>
-                  </div>
-                </details>
-              )}
-            </div>
+          {tab === "swap" && keypair && (
+            <SwapPanel
+              cluster={cluster}
+              connection={connection}
+              keypair={keypair}
+              balanceLamports={balanceLamports}
+              tokenRows={tokenRows}
+              setError={setError}
+              setStatus={setStatus}
+              onSwapComplete={async () => {
+                await refreshBalance();
+                await refreshTokens();
+              }}
+            />
           )}
 
           {tab === "activity" && (
