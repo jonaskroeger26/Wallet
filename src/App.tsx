@@ -57,13 +57,13 @@ type Session =
 
 type Tab = "portfolio" | "tokens" | "swap" | "activity" | "nfts" | "settings";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "portfolio", label: "Portfolio" },
-  { id: "tokens", label: "Tokens" },
-  { id: "swap", label: "Swap" },
-  { id: "activity", label: "Activity" },
-  { id: "nfts", label: "Collectibles" },
-  { id: "settings", label: "Settings" },
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: "portfolio", label: "Portfolio", icon: "◈" },
+  { id: "tokens", label: "Tokens", icon: "◇" },
+  { id: "swap", label: "Swap", icon: "⇄" },
+  { id: "activity", label: "Activity", icon: "↗" },
+  { id: "nfts", label: "NFTs", icon: "✦" },
+  { id: "settings", label: "Settings", icon: "⚙" },
 ];
 
 export function App() {
@@ -608,6 +608,8 @@ export function App() {
 
   return (
     <div className="app">
+      <div className="app__ambient" aria-hidden />
+      <div className="app__grid" aria-hidden />
       <div className="app__inner">
         <header className="app-header">
           <div className="app-header__brand">
@@ -630,7 +632,8 @@ export function App() {
           )}
         </header>
 
-        <div className="card">
+        <main className="app-main">
+        <div className="card card--network">
           <div className="field">
             <label htmlFor="cluster">Network</label>
             <select
@@ -653,7 +656,7 @@ export function App() {
       {!keypair && (
         <>
           {hasEncryptedVault && (
-            <div className="card stack" style={{ marginTop: "0.75rem" }}>
+            <div className="card stack mt-gap">
               <div className="section-title">Unlock (password-protected)</div>
               <p className="hint" style={{ margin: 0 }}>
                 This device has an older encrypted vault. Enter the password you set when saving it.
@@ -675,7 +678,7 @@ export function App() {
           )}
 
           {hasPlainVault && !hasEncryptedVault && (
-            <div className="card stack" style={{ marginTop: "0.75rem" }}>
+            <div className="card stack mt-gap">
               <div className="section-title">Saved wallet</div>
               <p className="hint" style={{ margin: 0 }}>
                 Open the wallet stored in this browser (no password on file yet).
@@ -688,7 +691,7 @@ export function App() {
 
           {!pendingMnemonic ? (
             <>
-              <div className="card stack" style={{ marginTop: "0.75rem" }}>
+              <div className="card stack mt-gap">
                 <div className="section-title">New wallet</div>
                 <p className="hint" style={{ margin: 0 }}>
                   Creates a real Solana keypair from a 12-word phrase. Saved locally without a password for now.
@@ -698,7 +701,7 @@ export function App() {
                 </button>
               </div>
 
-              <div className="card stack" style={{ marginTop: "0.75rem" }}>
+              <div className="card stack mt-gap">
                 <div className="section-title">Import recovery phrase</div>
                 <div className="field">
                   <label htmlFor="impPhrase">12 words</label>
@@ -715,7 +718,7 @@ export function App() {
                 </button>
               </div>
 
-              <div className="card stack" style={{ marginTop: "0.75rem" }}>
+              <div className="card stack mt-gap">
                 <div className="section-title">Import private key</div>
                 <div className="field">
                   <label htmlFor="imp">Base58 secret key</label>
@@ -734,7 +737,7 @@ export function App() {
               </div>
             </>
           ) : (
-            <div className="card stack" style={{ marginTop: "0.75rem" }}>
+            <div className="card stack mt-gap">
               <div className="section-title">Back up recovery phrase</div>
               <p className="hint" style={{ margin: 0 }}>
                 Write these words offline. Never share them. Anyone with the phrase can move your
@@ -770,15 +773,19 @@ export function App() {
 
       {keypair && (
         <>
-          <nav className="tabs" style={{ marginTop: "1rem" }} aria-label="Wallet sections">
+          <nav className="tabs" aria-label="Wallet sections">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 className={tab === t.id ? "tab active" : "tab"}
                 onClick={() => setTab(t.id)}
+                title={t.label}
               >
-                {t.label}
+                <span className="tab__icon" aria-hidden>
+                  {t.icon}
+                </span>
+                <span className="tab__text">{t.label}</span>
               </button>
             ))}
           </nav>
@@ -886,7 +893,7 @@ export function App() {
           {tab === "tokens" && (
             <div className="stack" style={{ gap: "0.75rem" }}>
               <div className="card">
-                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                <div className="flex-spread">
                   <div className="section-title" style={{ margin: 0 }}>
                     Assets
                   </div>
@@ -898,20 +905,27 @@ export function App() {
                   <p className="empty-state">No tokens yet. Fund the wallet or receive SPL.</p>
                 )}
                 <ul className="token-list">
-                  {tokenRows.map((r) => (
-                    <li key={r.mint} className="token-row">
-                      <div>
-                        <div>
-                          <strong>{jupMeta.get(r.mint)?.symbol ?? "Unknown"}</strong>{" "}
-                          <span className="hint">{jupMeta.get(r.mint)?.name}</span>
+                  {tokenRows.map((r) => {
+                    const meta = jupMeta.get(r.mint);
+                    const sym = meta?.symbol ?? "?";
+                    return (
+                      <li key={r.mint} className="token-row">
+                        <div className="token-avatar" aria-hidden>
+                          {sym.slice(0, 2).toUpperCase()}
                         </div>
-                        <div className="mono hint">{r.mint}</div>
-                        <div className="hint">
-                          Balance {r.amountUi} · {r.program}
+                        <div className="token-row__body">
+                          <div>
+                            <strong>{meta?.symbol ?? "Unknown"}</strong>{" "}
+                            <span className="hint">{meta?.name}</span>
+                          </div>
+                          <div className="mono hint">{r.mint}</div>
+                          <div className="hint">
+                            {r.amountUi} · {r.program}
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -1009,7 +1023,7 @@ export function App() {
 
           {tab === "activity" && (
             <div className="card">
-              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <div className="flex-spread">
                 <div className="section-title" style={{ margin: 0 }}>
                   Recent activity
                 </div>
@@ -1027,7 +1041,11 @@ export function App() {
                     >
                       {row.signature.slice(0, 10)}…{row.signature.slice(-6)}
                     </a>
-                    {row.err ? <span className="error">Failed</span> : <span className="hint">Confirmed</span>}
+                    {row.err ? (
+                      <span className="activity-status error">Failed</span>
+                    ) : (
+                      <span className="activity-status success">Done</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -1048,7 +1066,7 @@ export function App() {
               )}
               {heliusKey && (
                 <>
-                  <div className="row" style={{ justifyContent: "space-between" }}>
+                  <div className="flex-spread">
                     <div className="section-title" style={{ margin: 0 }}>
                       Collectibles
                     </div>
@@ -1128,7 +1146,7 @@ export function App() {
                 <button type="button" className="primary btn-block" onClick={addAddressBookEntry}>
                   Save contact
                 </button>
-                <ul className="ab-list" style={{ marginTop: "0.75rem" }}>
+                <ul className="ab-list mt-gap">
                   {addressBook.map((e, i) => (
                     <li key={e.address + i} className="row ab-item">
                       <span style={{ fontWeight: 600 }}>{e.name}</span>
@@ -1157,8 +1175,12 @@ export function App() {
         </>
       )}
 
-      {error && <div className="alert alert--error">{error}</div>}
-      {status && <div className="alert alert--success">{status}</div>}
+        </main>
+
+        <div className="toast-stack" role="status" aria-live="polite">
+          {error && <div className="toast toast--error">{error}</div>}
+          {status && <div className="toast toast--success">{status}</div>}
+        </div>
       </div>
     </div>
   );
