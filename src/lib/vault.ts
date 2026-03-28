@@ -4,6 +4,8 @@ export { encryptSecret, decryptSecret } from "./vault-crypto";
 
 const STORAGE_PRIMARY = "wallet.store";
 const STORAGE_LEGACY = "wallet.v1";
+/** Unencrypted JSON vault (password protection can be added later). */
+export const STORAGE_PLAIN = "wallet.plain.v1";
 
 export type VaultPayload =
   | { v: 2; kind: "mnemonic"; mnemonic: string; accountIndex: number }
@@ -41,7 +43,34 @@ export function saveEncryptedVault(b64: string): void {
   localStorage.removeItem(STORAGE_LEGACY);
 }
 
+export function savePlainVault(payload: VaultPayload): void {
+  localStorage.setItem(STORAGE_PLAIN, JSON.stringify(payload));
+}
+
+export function loadPlainVault(): VaultPayload | null {
+  const raw = localStorage.getItem(STORAGE_PLAIN);
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw) as VaultPayload;
+    if (p.v !== 2) return null;
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPlainVault(): void {
+  localStorage.removeItem(STORAGE_PLAIN);
+}
+
+/** Remove password-encrypted vault blobs only (plain wallet untouched). */
+export function clearEncryptedVaultStorage(): void {
+  localStorage.removeItem(STORAGE_PRIMARY);
+  localStorage.removeItem(STORAGE_LEGACY);
+}
+
 export function clearVault(): void {
   localStorage.removeItem(STORAGE_PRIMARY);
   localStorage.removeItem(STORAGE_LEGACY);
+  clearPlainVault();
 }

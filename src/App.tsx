@@ -10,11 +10,15 @@ import {
   clusterApiUrl,
 } from "@solana/web3.js";
 import {
+  clearEncryptedVaultStorage,
+  clearPlainVault,
   clearVault,
   decryptVault,
   encryptVault,
   loadEncryptedVault,
+  loadPlainVault,
   saveEncryptedVault,
+  savePlainVault,
 } from "./lib/vault";
 import {
   generateMnemonic12,
@@ -69,7 +73,6 @@ export function App() {
   const [sessionPassword, setSessionPassword] = useState("");
 
   const [unlockPassword, setUnlockPassword] = useState("");
-  const [password, setPassword] = useState("");
   const [importSecret, setImportSecret] = useState("");
   const [importMnemonic, setImportMnemonic] = useState("");
   const [pendingMnemonic, setPendingMnemonic] = useState<string | null>(null);
@@ -170,15 +173,25 @@ export function App() {
     if (tab === "activity" && keypair) void refreshActivity();
   }, [tab, keypair, refreshActivity]);
 
-  async function persistSession(next: Session, password: string) {
+  /**
+   * @param passwordOverride `null` = save plain (no password). `undefined` = use `sessionPassword` state.
+   */
+  async function persistSession(next: Session, passwordOverride?: string | null) {
     const payload = sessionToVaultPayload(
       next.mode,
       next.mode === "mnemonic" ? next.mnemonic : undefined,
       next.mode === "mnemonic" ? next.accountIndex : 0,
       next.keypair
     );
-    const b64 = await encryptVault(payload, password);
-    saveEncryptedVault(b64);
+    const pwd =
+      passwordOverride !== undefined ? passwordOverride : sessionPassword;
+    if (pwd) {
+      saveEncryptedVault(await encryptVault(payload, pwd));
+      clearPlainVault();
+    } else {
+      savePlainVault(payload);
+      clearEncryptedVaultStorage();
+    }
   }
 
   async function handleUnlock() {
@@ -203,6 +216,7 @@ export function App() {
         setSession({ mode: "secret", keypair: kp });
       }
       setSessionPassword(unlockPassword);
+      clearPlainVault();
       setUnlockPassword("");
       setStatus("Unlocked.");
     } catch {
@@ -210,11 +224,38 @@ export function App() {
     }
   }
 
+  function handleOpenPlainWallet() {
+    setError(null);
+    setStatus(null);
+    const vault = loadPlainVault();
+    if (!vault) {
+      setError("No saved wallet.");
+      return;
+    }
+    try {
+      const kp = vaultToKeypair(vault);
+      if (vault.kind === "mnemonic") {
+        setSession({
+          mode: "mnemonic",
+          mnemonic: vault.mnemonic,
+          accountIndex: vault.accountIndex,
+          keypair: kp,
+        });
+      } else {
+        setSession({ mode: "secret", keypair: kp });
+      }
+      setSessionPassword("");
+      setStatus("Wallet loaded.");
+    } catch {
+      setError("Could not read saved wallet.");
+    }
+  }
+
   async function handleCreateMnemonicContinue() {
     setError(null);
     setStatus(null);
-    if (!pendingMnemonic || !password || password.length < 8) {
-      setError("Use a password of at least 8 characters.");
+    if (!pendingMnemonic) {
+      setError("Missing recovery phrase.");
       return;
     }
     if (!backupConfirmed) {
@@ -228,22 +269,17 @@ export function App() {
       accountIndex: 0,
       keypair: kp,
     };
-    await persistSession(next, password);
+    await persistSession(next, null);
     setSession(next);
-    setSessionPassword(password);
+    setSessionPassword("");
     setPendingMnemonic(null);
     setBackupConfirmed(false);
-    setPassword("");
-    setStatus("Wallet created. Your phrase is encrypted in this browser only.");
+    setStatus("Wallet created and saved in this browser. Password protection can be added later.");
   }
 
   async function handleImportMnemonic() {
     setError(null);
     setStatus(null);
-    if (!password || password.length < 8) {
-      setError("Use a password of at least 8 characters.");
-      return;
-    }
     const phrase = importMnemonic.trim().toLowerCase().replace(/\s+/g, " ");
     if (!validateMnemonicPhrase(phrase)) {
       setError("Invalid recovery phrase.");
@@ -256,21 +292,16 @@ export function App() {
       accountIndex: 0,
       keypair: kp,
     };
-    await persistSession(next, password);
+    await persistSession(next, null);
     setSession(next);
-    setSessionPassword(password);
+    setSessionPassword("");
     setImportMnemonic("");
-    setPassword("");
     setStatus("Recovery phrase imported.");
   }
 
   async function handleImportSecret() {
     setError(null);
     setStatus(null);
-    if (!password || password.length < 8) {
-      setError("Use a password of at least 8 characters.");
-      return;
-    }
     let kp: Keypair;
     try {
       kp = secretBase58ToKeypair(importSecret.trim());
@@ -279,27 +310,22 @@ export function App() {
       return;
     }
     const next: Session = { mode: "secret", keypair: kp };
-    await persistSession(next, password);
+    await persistSession(next, null);
     setSession(next);
-    setSessionPassword(password);
+    setSessionPassword("");
     setImportSecret("");
-    setPassword("");
     setStatus("Private key imported.");
   }
 
   function startCreateMnemonic() {
     setError(null);
     setStatus(null);
-    if (!password || password.length < 8) {
-      setError("Use a password of at least 8 characters first.");
-      return;
-    }
     setPendingMnemonic(generateMnemonic12());
     setBackupConfirmed(false);
   }
 
   async function setAccountIndex(nextIndex: number) {
-    if (!session || session.mode !== "mnemonic" || !sessionPassword) return;
+    if (!session || session.mode !== "mnemonic") return;
     setError(null);
     setStatus(null);
     if (nextIndex < 0 || nextIndex > 19) return;
@@ -310,7 +336,7 @@ export function App() {
       accountIndex: nextIndex,
       keypair: kp,
     };
-    await persistSession(next, sessionPassword);
+    await persistSession(next);
     setSession(next);
     setStatus(`Switched to account ${nextIndex + 1}.`);
   }
@@ -577,7 +603,8 @@ export function App() {
     if (tab === "nfts" && keypair && heliusKey) void loadNfts();
   }, [tab, keypair, heliusKey, address]);
 
-  const hasVault = Boolean(loadEncryptedVault());
+  const hasEncryptedVault = Boolean(loadEncryptedVault());
+  const hasPlainVault = Boolean(loadPlainVault());
 
   return (
     <div className="app">
@@ -588,7 +615,7 @@ export function App() {
             <div className="app-header__titles">
               <h1>Wallet</h1>
               <p className="tagline">
-                Self-custody Solana in your browser. Keys encrypted locally.
+                Self-custody Solana in your browser. Keys stay on this device; optional password later.
               </p>
             </div>
           </div>
@@ -625,9 +652,12 @@ export function App() {
 
       {!keypair && (
         <>
-          {hasVault && (
+          {hasEncryptedVault && (
             <div className="card stack" style={{ marginTop: "0.75rem" }}>
-              <div className="section-title">Unlock</div>
+              <div className="section-title">Unlock (password-protected)</div>
+              <p className="hint" style={{ margin: 0 }}>
+                This device has an older encrypted vault. Enter the password you set when saving it.
+              </p>
               <div className="field">
                 <label htmlFor="unlock">Password</label>
                 <input
@@ -644,24 +674,25 @@ export function App() {
             </div>
           )}
 
+          {hasPlainVault && !hasEncryptedVault && (
+            <div className="card stack" style={{ marginTop: "0.75rem" }}>
+              <div className="section-title">Saved wallet</div>
+              <p className="hint" style={{ margin: 0 }}>
+                Open the wallet stored in this browser (no password on file yet).
+              </p>
+              <button type="button" className="primary btn-block" onClick={handleOpenPlainWallet}>
+                Open wallet
+              </button>
+            </div>
+          )}
+
           {!pendingMnemonic ? (
             <>
               <div className="card stack" style={{ marginTop: "0.75rem" }}>
                 <div className="section-title">New wallet</div>
                 <p className="hint" style={{ margin: 0 }}>
-                  Generates a 12-word recovery phrase. Stored encrypted in this browser only.
+                  Creates a real Solana keypair from a 12-word phrase. Saved locally without a password for now.
                 </p>
-                <div className="field">
-                  <label htmlFor="pw1">Vault password</label>
-                  <input
-                    id="pw1"
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="8+ characters"
-                  />
-                </div>
                 <button type="button" className="primary btn-block" onClick={startCreateMnemonic}>
                   Create wallet
                 </button>
@@ -677,16 +708,6 @@ export function App() {
                     value={importMnemonic}
                     onChange={(e) => setImportMnemonic(e.target.value)}
                     placeholder="word1 word2 word3 …"
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="pwPhrase">Vault password</label>
-                  <input
-                    id="pwPhrase"
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
                 <button type="button" className="btn-block" onClick={() => void handleImportMnemonic()}>
@@ -705,16 +726,6 @@ export function App() {
                     value={importSecret}
                     onChange={(e) => setImportSecret(e.target.value)}
                     placeholder="Paste private key"
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="pw2">Vault password</label>
-                  <input
-                    id="pw2"
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
                 <button type="button" className="btn-block" onClick={() => void handleImportSecret()}>

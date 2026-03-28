@@ -50,7 +50,8 @@ npm run preview
 
 ## Security
 
-- Browser + password encryption is **not** a hardware wallet or audited custody stack.
+- By default the app saves the vault **without a password** (JSON in `localStorage`, key `wallet.plain.v1`). Anyone with access to this browser profile can read it. **Optional password encryption** is planned for a later release; older installs that already used a password still unlock with that password.
+- This is **not** a hardware wallet or audited custody stack.
 - Use **devnet** while experimenting. **Mainnet** uses real SOL; Jupiter swap is **mainnet** liquidity.
 
 ## Repository
