@@ -20,8 +20,9 @@ import { keypairToSecretBase58, secretBase58ToKeypair } from "./lib/wallet";
 type Cluster = "devnet" | "mainnet-beta";
 
 const RPC: Record<Cluster, string> = {
-  devnet: clusterApiUrl("devnet"),
-  "mainnet-beta": clusterApiUrl("mainnet-beta"),
+  devnet: import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim() || clusterApiUrl("devnet"),
+  "mainnet-beta":
+    import.meta.env.VITE_SOLANA_RPC_MAINNET?.trim() || clusterApiUrl("mainnet-beta"),
 };
 
 export function App() {
@@ -35,6 +36,7 @@ export function App() {
   const [sendAmount, setSendAmount] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [airdropBusy, setAirdropBusy] = useState(false);
 
   const connection = useMemo(() => new Connection(RPC[cluster], "confirmed"), [cluster]);
 
@@ -121,6 +123,40 @@ export function App() {
     clearVault();
     handleLock();
     setStatus("Saved wallet removed from this browser.");
+  }
+
+  async function handleAirdrop() {
+    if (!keypair || cluster !== "devnet") return;
+    setError(null);
+    setStatus(null);
+    setAirdropBusy(true);
+    try {
+      const lamports = 1 * LAMPORTS_PER_SOL;
+      const sig = await connection.requestAirdrop(keypair.publicKey, lamports);
+      const latest = await connection.getLatestBlockhash();
+      await connection.confirmTransaction({
+        signature: sig,
+        blockhash: latest.blockhash,
+        lastValidBlockHeight: latest.lastValidBlockHeight,
+      });
+      setStatus(`Devnet airdrop received (1 SOL). Signature: ${sig}`);
+      await refreshBalance();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAirdropBusy(false);
+    }
+  }
+
+  async function copyAddress() {
+    if (!address) return;
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(address);
+      setStatus("Address copied.");
+    } catch {
+      setError("Could not copy (clipboard permission).");
+    }
   }
 
   async function handleSend() {
@@ -257,6 +293,11 @@ export function App() {
           <div>
             <span className="hint">Address</span>
             <div className="mono">{address}</div>
+            <div className="row" style={{ marginTop: "0.5rem" }}>
+              <button type="button" onClick={() => void copyAddress()}>
+                Copy address
+              </button>
+            </div>
           </div>
           <div className="row">
             <button type="button" onClick={() => void refreshBalance()}>
@@ -268,6 +309,21 @@ export function App() {
                 : `${(balanceLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`}
             </span>
           </div>
+
+          {cluster === "devnet" && (
+            <div className="stack">
+              <p className="hint" style={{ margin: 0 }}>
+                On devnet you can request free SOL for testing (rate limits apply).
+              </p>
+              <button
+                type="button"
+                disabled={airdropBusy}
+                onClick={() => void handleAirdrop()}
+              >
+                {airdropBusy ? "Requesting…" : "Request 1 SOL (devnet airdrop)"}
+              </button>
+            </div>
+          )}
 
           <div className="stack">
             <div>

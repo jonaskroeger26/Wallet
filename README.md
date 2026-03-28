@@ -1,42 +1,70 @@
 # Wallet
 
-Solana web wallet starter: create or import a keypair, encrypt it in the browser with a password, check balance, send SOL. Defaults to **devnet**.
+Solana web wallet: create or import a keypair, encrypt it in the browser with a password, view balance, request **devnet SOL**, and send SOL.
 
-## Develop
+## What you need
 
-```bash
-npm install
-npm run dev
-```
+- **Node.js** 18+ ([nodejs.org](https://nodejs.org/) or `nvm install --lts`)
+- **npm** (comes with Node)
 
-## Build
+## Run the app locally
+
+1. **Get the code**
+
+   ```bash
+   git clone https://github.com/jonaskroeger26/Wallet.git
+   cd Wallet
+   ```
+
+   Or open the `Wallet` folder if you already have it.
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Start the dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Open the app** — the terminal prints a URL (usually `http://localhost:5173`). Open it in your browser.
+
+## Use the wallet (devnet)
+
+1. Keep **Network** on **Devnet** (default).
+2. **Create a new wallet**: set a password (8+ characters) → **Create new wallet**.  
+   Or **Import** a base58 secret key and the same password → **Import and save**.
+3. **Unlock** later with **Unlock saved wallet** if you already saved a vault in this browser.
+4. **Fund devnet**: click **Request 1 SOL (devnet airdrop)**.  
+   If it fails (rate limit / faucet), wait a few minutes or use another [devnet faucet](https://faucet.solana.com/) with your copied address.
+5. **Send SOL**: paste a recipient address, amount in SOL → **Send SOL**.
+6. **Lock** when done; **Forget saved wallet** removes the encrypted vault from this browser.
+
+Optional: copy `.env.example` to `.env` and set `VITE_SOLANA_RPC_DEVNET` / `VITE_SOLANA_RPC_MAINNET` for a dedicated RPC (e.g. Helius).
+
+## Production build
 
 ```bash
 npm run build
 npm run preview
 ```
 
+`dist/` is static files you can host on any static host (Netlify, Vercel, Cloudflare Pages, etc.).
+
 ## Security
 
-- This is a **starter**: browser storage and password-based encryption are not a substitute for a hardware wallet or audited mobile stack for large amounts.
-- Prefer **devnet** while experimenting.
+- **Starter only**: browser storage + password encryption is not a hardware wallet or audited custody system. Do not use for large mainnet funds without a serious security review.
+- Use **devnet** while learning. **Mainnet-beta** uses real SOL.
 
-## Push to GitHub
+## Repo
 
-```bash
-cd Wallet
-git init
-git add .
-git commit -m "Initial Solana wallet scaffold"
-git branch -M main
-git remote add origin https://github.com/jonaskroeger26/Wallet.git
-git push -u origin main
-```
+Source: [github.com/jonaskroeger26/Wallet](https://github.com/jonaskroeger26/Wallet)
 
-If the remote already exists from `git clone`, skip `git init` / `remote add` and push as usual.
-
-## Next steps
+## Next ideas
 
 - Jupiter swap API (quotes + swap transactions)
-- SPL token accounts and transfers
-- React Native / Expo for a Jupiter Mobile–style app
+- SPL token balances and transfers
+- React Native / Expo for a mobile app
