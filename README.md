@@ -1,70 +1,58 @@
 # Wallet
 
-Solana web wallet: create or import a keypair, encrypt it in the browser with a password, view balance, request **devnet SOL**, and send SOL.
+Solana web wallet with **Phantom-style** features in the browser: 12-word recovery phrase, HD accounts, SOL + SPL, Jupiter swap, activity history, address book, and optional NFT previews (Helius).
 
-## What you need
+## What is (and is not) “like Phantom”
 
-- **Node.js** 18+ ([nodejs.org](https://nodejs.org/) or `nvm install --lts`)
-- **npm** (comes with Node)
+| Area | This project | Phantom |
+|------|----------------|---------|
+| Recovery phrase + HD (`m/44'/501'/…`) | Yes | Yes |
+| Multiple accounts | Yes (indexes 0–19) | Yes |
+| SOL + SPL | Yes (SPL send: standard Token program) | Full Token-2022 / extensions |
+| Swap | Jupiter v6 (mainnet) | Jupiter + in-app UX |
+| Collectibles | Optional via `VITE_HELIUS_API_KEY` | Full gallery + metadata |
+| Browser extension + injected `window.solana` | **No** (web app only) | Yes |
+| Mobile apps, fiat on-ramp, MPC email login | **No** | Yes |
+| Hardware wallet | **No** | Yes |
+| Staking UI | **No** | Yes |
 
-## Run the app locally
+Treat this as a **learning / self-custody web wallet**, not a drop-in replacement for Phantom’s product or security review.
 
-1. **Get the code**
+## Requirements
 
-   ```bash
-   git clone https://github.com/jonaskroeger26/Wallet.git
-   cd Wallet
-   ```
+- Node.js 18+
+- npm
 
-   Or open the `Wallet` folder if you already have it.
+## Run locally
 
-2. **Install dependencies**
+```bash
+git clone https://github.com/jonaskroeger26/Wallet.git
+cd Wallet
+npm install
+npm run dev
+```
 
-   ```bash
-   npm install
-   ```
+Open the URL shown (usually `http://localhost:5173`).
 
-3. **Start the dev server**
+## Environment (optional)
 
-   ```bash
-   npm run dev
-   ```
+Copy `.env.example` to `.env`:
 
-4. **Open the app** — the terminal prints a URL (usually `http://localhost:5173`). Open it in your browser.
+- **`VITE_SOLANA_RPC_*`** — faster or more reliable RPC than the public cluster URLs.
+- **`VITE_HELIUS_API_KEY`** — enables the **Collectibles** tab (NFT list via Helius).
 
-## Use the wallet (devnet)
-
-1. Keep **Network** on **Devnet** (default).
-2. **Create a new wallet**: set a password (8+ characters) → **Create new wallet**.  
-   Or **Import** a base58 secret key and the same password → **Import and save**.
-3. **Unlock** later with **Unlock saved wallet** if you already saved a vault in this browser.
-4. **Fund devnet**: click **Request 1 SOL (devnet airdrop)**.  
-   If it fails (rate limit / faucet), wait a few minutes or use another [devnet faucet](https://faucet.solana.com/) with your copied address.
-5. **Send SOL**: paste a recipient address, amount in SOL → **Send SOL**.
-6. **Lock** when done; **Forget saved wallet** removes the encrypted vault from this browser.
-
-Optional: copy `.env.example` to `.env` and set `VITE_SOLANA_RPC_DEVNET` / `VITE_SOLANA_RPC_MAINNET` for a dedicated RPC (e.g. Helius).
-
-## Production build
+## Build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-`dist/` is static files you can host on any static host (Netlify, Vercel, Cloudflare Pages, etc.).
-
 ## Security
 
-- **Starter only**: browser storage + password encryption is not a hardware wallet or audited custody system. Do not use for large mainnet funds without a serious security review.
-- Use **devnet** while learning. **Mainnet-beta** uses real SOL.
+- Browser + password encryption is **not** a hardware wallet or audited custody stack.
+- Use **devnet** while experimenting. **Mainnet** uses real SOL; Jupiter swap is **mainnet** liquidity.
 
-## Repo
+## Repository
 
-Source: [github.com/jonaskroeger26/Wallet](https://github.com/jonaskroeger26/Wallet)
-
-## Next ideas
-
-- Jupiter swap API (quotes + swap transactions)
-- SPL token balances and transfers
-- React Native / Expo for a mobile app
+[github.com/jonaskroeger26/Wallet](https://github.com/jonaskroeger26/Wallet)
