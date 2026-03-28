@@ -580,43 +580,55 @@ export function App() {
   const hasVault = Boolean(loadEncryptedVault());
 
   return (
-    <div className="stack">
-      <header className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h1 style={{ margin: 0 }}>Wallet</h1>
-        {keypair && (
-          <span className="hint">
-            {cluster === "devnet" ? "Devnet" : "Mainnet"}
-          </span>
-        )}
-      </header>
-      <p className="hint">
-        Phantom-style web wallet: recovery phrase, multiple accounts, tokens, Jupiter swap, activity.
-        Extension / mobile app parity is not included.
-      </p>
+    <div className="app">
+      <div className="app__inner">
+        <header className="app-header">
+          <div className="app-header__brand">
+            <div className="app-header__logo" aria-hidden />
+            <div className="app-header__titles">
+              <h1>Wallet</h1>
+              <p className="tagline">
+                Self-custody Solana in your browser. Keys encrypted locally.
+              </p>
+            </div>
+          </div>
+          {keypair && (
+            <span
+              className={
+                cluster === "devnet" ? "badge badge--dev" : "badge badge--live"
+              }
+            >
+              {cluster === "devnet" ? "Devnet" : "Mainnet"}
+            </span>
+          )}
+        </header>
 
-      <div>
-        <label htmlFor="cluster">Network</label>
-        <select
-          id="cluster"
-          value={cluster}
-          onChange={(e) => setCluster(e.target.value as Cluster)}
-          disabled={Boolean(keypair)}
-        >
-          <option value="devnet">Devnet</option>
-          <option value="mainnet-beta">Mainnet-beta</option>
-        </select>
-        {keypair && (
-          <p className="hint" style={{ marginTop: "0.35rem" }}>
-            Lock wallet to change network.
-          </p>
-        )}
-      </div>
+        <div className="card">
+          <div className="field">
+            <label htmlFor="cluster">Network</label>
+            <select
+              id="cluster"
+              value={cluster}
+              onChange={(e) => setCluster(e.target.value as Cluster)}
+              disabled={Boolean(keypair)}
+            >
+              <option value="devnet">Devnet</option>
+              <option value="mainnet-beta">Mainnet-beta</option>
+            </select>
+            {keypair && (
+              <p className="hint" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+                Lock your wallet to switch networks.
+              </p>
+            )}
+          </div>
+        </div>
 
       {!keypair && (
         <>
           {hasVault && (
-            <div className="stack">
-              <div>
+            <div className="card stack" style={{ marginTop: "0.75rem" }}>
+              <div className="section-title">Unlock</div>
+              <div className="field">
                 <label htmlFor="unlock">Password</label>
                 <input
                   id="unlock"
@@ -626,47 +638,49 @@ export function App() {
                   onChange={(e) => setUnlockPassword(e.target.value)}
                 />
               </div>
-              <button type="button" className="primary" onClick={() => void handleUnlock()}>
-                Unlock saved wallet
+              <button type="button" className="primary btn-block" onClick={() => void handleUnlock()}>
+                Unlock wallet
               </button>
             </div>
           )}
 
-          <hr />
-
           {!pendingMnemonic ? (
             <>
-              <div className="stack">
-                <button type="button" className="primary" onClick={startCreateMnemonic}>
-                  Create new wallet (12-word phrase)
-                </button>
-                <div>
-                  <label htmlFor="pw1">Password (encrypt vault)</label>
+              <div className="card stack" style={{ marginTop: "0.75rem" }}>
+                <div className="section-title">New wallet</div>
+                <p className="hint" style={{ margin: 0 }}>
+                  Generates a 12-word recovery phrase. Stored encrypted in this browser only.
+                </p>
+                <div className="field">
+                  <label htmlFor="pw1">Vault password</label>
                   <input
                     id="pw1"
                     type="password"
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="8+ characters"
                   />
                 </div>
+                <button type="button" className="primary btn-block" onClick={startCreateMnemonic}>
+                  Create wallet
+                </button>
               </div>
 
-              <hr />
-
-              <div className="stack">
-                <div>
-                  <label htmlFor="impPhrase">Import recovery phrase (12 words)</label>
+              <div className="card stack" style={{ marginTop: "0.75rem" }}>
+                <div className="section-title">Import recovery phrase</div>
+                <div className="field">
+                  <label htmlFor="impPhrase">12 words</label>
                   <textarea
                     id="impPhrase"
                     rows={3}
                     value={importMnemonic}
                     onChange={(e) => setImportMnemonic(e.target.value)}
-                    placeholder="word1 word2 …"
+                    placeholder="word1 word2 word3 …"
                   />
                 </div>
-                <div>
-                  <label htmlFor="pwPhrase">Password</label>
+                <div className="field">
+                  <label htmlFor="pwPhrase">Vault password</label>
                   <input
                     id="pwPhrase"
                     type="password"
@@ -675,16 +689,15 @@ export function App() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                <button type="button" onClick={() => void handleImportMnemonic()}>
-                  Import phrase and save
+                <button type="button" className="btn-block" onClick={() => void handleImportMnemonic()}>
+                  Import phrase
                 </button>
               </div>
 
-              <hr />
-
-              <div className="stack">
-                <div>
-                  <label htmlFor="imp">Import private key (base58)</label>
+              <div className="card stack" style={{ marginTop: "0.75rem" }}>
+                <div className="section-title">Import private key</div>
+                <div className="field">
+                  <label htmlFor="imp">Base58 secret key</label>
                   <textarea
                     id="imp"
                     rows={3}
@@ -694,8 +707,8 @@ export function App() {
                     placeholder="Paste private key"
                   />
                 </div>
-                <div>
-                  <label htmlFor="pw2">Password</label>
+                <div className="field">
+                  <label htmlFor="pw2">Vault password</label>
                   <input
                     id="pw2"
                     type="password"
@@ -704,29 +717,28 @@ export function App() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                <button type="button" onClick={() => void handleImportSecret()}>
-                  Import private key and save
+                <button type="button" className="btn-block" onClick={() => void handleImportSecret()}>
+                  Import key
                 </button>
               </div>
             </>
           ) : (
-            <div className="stack">
-              <p className="hint">
-                Write these words down offline. Never share them. Anyone with the phrase can
-                steal funds.
+            <div className="card stack" style={{ marginTop: "0.75rem" }}>
+              <div className="section-title">Back up recovery phrase</div>
+              <p className="hint" style={{ margin: 0 }}>
+                Write these words offline. Never share them. Anyone with the phrase can move your
+                funds.
               </p>
-              <div className="mono" style={{ lineHeight: 1.6 }}>
-                {pendingMnemonic}
-              </div>
-              <label className="row">
+              <div className="mnemonic-box">{pendingMnemonic}</div>
+              <label className="check">
                 <input
                   type="checkbox"
                   checked={backupConfirmed}
                   onChange={(e) => setBackupConfirmed(e.target.checked)}
                 />
-                <span>I saved my recovery phrase in a safe place</span>
+                <span>I have saved my recovery phrase in a safe place</span>
               </label>
-              <div className="row">
+              <div className="btn-group btn-group--stretch">
                 <button type="button" className="primary" onClick={() => void handleCreateMnemonicContinue()}>
                   Continue
                 </button>
@@ -747,7 +759,7 @@ export function App() {
 
       {keypair && (
         <>
-          <nav className="tabs">
+          <nav className="tabs" style={{ marginTop: "1rem" }} aria-label="Wallet sections">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -761,140 +773,167 @@ export function App() {
           </nav>
 
           {tab === "portfolio" && (
-            <div className="stack">
-              <div>
-                <span className="hint">Address</span>
-                <div className="mono">{address}</div>
-                <div className="row" style={{ marginTop: "0.5rem" }}>
-                  <button type="button" onClick={() => void copyAddress()}>
-                    Copy address
-                  </button>
+            <div className="stack" style={{ gap: "0.75rem" }}>
+              <div className="card card--flush">
+                <div className="balance-block">
+                  <div className="balance-block__label">Total balance</div>
+                  <div className="balance-block__value">
+                    {balanceLamports === null
+                      ? "—"
+                      : `${(balanceLamports / LAMPORTS_PER_SOL).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 6,
+                        })}`}
+                  </div>
+                  <div className="balance-block__fiat">SOL · {cluster === "devnet" ? "Devnet" : "Mainnet-beta"}</div>
+                </div>
+                <div className="card__body" style={{ paddingTop: 0 }}>
+                  <div className="section-title">Receiving address</div>
+                  <div className="address-chip">
+                    <div className="address-chip__text">{address}</div>
+                    <button type="button" onClick={() => void copyAddress()}>
+                      Copy
+                    </button>
+                  </div>
+                  <div className="row" style={{ marginTop: "0.65rem" }}>
+                    <button type="button" className="btn-ghost" onClick={() => void refreshBalance()}>
+                      Refresh
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {session?.mode === "mnemonic" && (
-                <div>
-                  <label>Account (HD)</label>
-                  <div className="row">
+                <div className="card">
+                  <div className="section-title">Accounts</div>
+                  <div className="stepper">
                     <button
                       type="button"
                       disabled={session.accountIndex <= 0}
                       onClick={() => void setAccountIndex(session.accountIndex - 1)}
                     >
-                      Previous
+                      ←
                     </button>
-                    <span>
-                      Account {session.accountIndex + 1} (index {session.accountIndex})
+                    <span className="stepper__meta">
+                      Account {session.accountIndex + 1}
+                      <span className="hint"> · index {session.accountIndex}</span>
                     </span>
                     <button
                       type="button"
                       disabled={session.accountIndex >= 19}
                       onClick={() => void setAccountIndex(session.accountIndex + 1)}
                     >
-                      Next
+                      →
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="row">
-                <button type="button" onClick={() => void refreshBalance()}>
-                  Refresh balance
-                </button>
-                <span>
-                  {balanceLamports === null
-                    ? "…"
-                    : `${(balanceLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`}
-                </span>
-              </div>
-
               {cluster === "devnet" && (
-                <div className="stack">
+                <div className="card">
+                  <div className="section-title">Devnet</div>
                   <button
                     type="button"
+                    className="btn-block"
                     disabled={airdropBusy}
                     onClick={() => void handleAirdrop()}
                   >
-                    {airdropBusy ? "Requesting…" : "Request 1 SOL (devnet airdrop)"}
+                    {airdropBusy ? "Requesting…" : "Request 1 SOL from faucet"}
                   </button>
                 </div>
               )}
 
-              <div className="stack">
-                <div>
-                  <label htmlFor="to">Send SOL — recipient</label>
-                  <input id="to" value={sendTo} onChange={(e) => setSendTo(e.target.value)} />
+              <div className="card">
+                <div className="section-title">Send SOL</div>
+                <div className="field">
+                  <label htmlFor="to">Recipient</label>
+                  <input
+                    id="to"
+                    className="mono"
+                    value={sendTo}
+                    onChange={(e) => setSendTo(e.target.value)}
+                    placeholder="Solana address"
+                  />
                 </div>
-                <div>
-                  <label htmlFor="amt">Amount (SOL)</label>
+                <div className="field">
+                  <label htmlFor="amt">Amount</label>
                   <input
                     id="amt"
                     inputMode="decimal"
                     value={sendAmount}
                     onChange={(e) => setSendAmount(e.target.value)}
+                    placeholder="0.0"
                   />
                 </div>
-                <button type="button" className="primary" onClick={() => void handleSendSol()}>
-                  Send SOL
+                <button type="button" className="primary btn-block" onClick={() => void handleSendSol()}>
+                  Send
                 </button>
               </div>
             </div>
           )}
 
           {tab === "tokens" && (
-            <div className="stack">
-              <div className="row">
-                <button type="button" disabled={tokensBusy} onClick={() => void refreshTokens()}>
-                  {tokensBusy ? "Loading…" : "Refresh tokens"}
+            <div className="stack" style={{ gap: "0.75rem" }}>
+              <div className="card">
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="section-title" style={{ margin: 0 }}>
+                    Assets
+                  </div>
+                  <button type="button" className="btn-ghost" disabled={tokensBusy} onClick={() => void refreshTokens()}>
+                    {tokensBusy ? "Loading…" : "Refresh"}
+                  </button>
+                </div>
+                {tokenRows.length === 0 && !tokensBusy && (
+                  <p className="empty-state">No tokens yet. Fund the wallet or receive SPL.</p>
+                )}
+                <ul className="token-list">
+                  {tokenRows.map((r) => (
+                    <li key={r.mint} className="token-row">
+                      <div>
+                        <div>
+                          <strong>{jupMeta.get(r.mint)?.symbol ?? "Unknown"}</strong>{" "}
+                          <span className="hint">{jupMeta.get(r.mint)?.name}</span>
+                        </div>
+                        <div className="mono hint">{r.mint}</div>
+                        <div className="hint">
+                          Balance {r.amountUi} · {r.program}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="card">
+                <div className="section-title">Send SPL</div>
+                <p className="hint" style={{ marginTop: 0 }}>
+                  Standard Token program only (not Token-2022 extensions).
+                </p>
+                <div className="field">
+                  <label htmlFor="splMint">Mint</label>
+                  <input id="splMint" className="mono" value={splMint} onChange={(e) => setSplMint(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="splDest">Recipient</label>
+                  <input id="splDest" className="mono" value={splDest} onChange={(e) => setSplDest(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="splAmt">Amount</label>
+                  <input id="splAmt" inputMode="decimal" value={splAmount} onChange={(e) => setSplAmount(e.target.value)} />
+                </div>
+                <button type="button" className="primary btn-block" onClick={() => void handleSendSpl()}>
+                  Send token
                 </button>
               </div>
-              {tokenRows.length === 0 && !tokensBusy && (
-                <p className="hint">No token balances (or only zero balances).</p>
-              )}
-              <ul className="token-list">
-                {tokenRows.map((r) => (
-                  <li key={r.mint} className="token-row">
-                    <div>
-                      <div>
-                        <strong>{jupMeta.get(r.mint)?.symbol ?? "Unknown"}</strong>{" "}
-                        <span className="hint">{jupMeta.get(r.mint)?.name}</span>
-                      </div>
-                      <div className="mono hint">{r.mint}</div>
-                      <div className="hint">
-                        {r.amountUi} · {r.program}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <hr />
-              <p className="hint">Send SPL (standard Token program only)</p>
-              <div>
-                <label htmlFor="splMint">Mint address</label>
-                <input id="splMint" className="mono" value={splMint} onChange={(e) => setSplMint(e.target.value)} />
-              </div>
-              <div>
-                <label htmlFor="splDest">Recipient wallet</label>
-                <input id="splDest" className="mono" value={splDest} onChange={(e) => setSplDest(e.target.value)} />
-              </div>
-              <div>
-                <label htmlFor="splAmt">Amount (human)</label>
-                <input id="splAmt" inputMode="decimal" value={splAmount} onChange={(e) => setSplAmount(e.target.value)} />
-              </div>
-              <button type="button" className="primary" onClick={() => void handleSendSpl()}>
-                Send SPL token
-              </button>
             </div>
           )}
 
           {tab === "swap" && (
-            <div className="stack">
-              <p className="hint">
-                Jupiter routes on <strong>mainnet</strong>. Switch to Mainnet-beta and fund the wallet
-                with real SOL before swapping.
+            <div className="card stack">
+              <p className="hint" style={{ margin: 0 }}>
+                Jupiter aggregates mainnet liquidity. Use <strong>Mainnet-beta</strong> and real SOL.
               </p>
-              <div>
+              <div className="field">
                 <label htmlFor="inMint">Input mint</label>
                 <input
                   id="inMint"
@@ -903,18 +942,18 @@ export function App() {
                   onChange={(e) => setSwapInMint(e.target.value)}
                 />
               </div>
-              <div>
+              <div className="field">
                 <label htmlFor="outMint">Output mint</label>
                 <input
                   id="outMint"
                   className="mono"
                   value={swapOutMint}
                   onChange={(e) => setSwapOutMint(e.target.value)}
-                  placeholder="Token mint address"
+                  placeholder="Token mint"
                 />
               </div>
-              <div>
-                <label htmlFor="swapAmt">Amount (SOL if input is native mint)</label>
+              <div className="field">
+                <label htmlFor="swapAmt">Amount (SOL units if input is native mint)</label>
                 <input
                   id="swapAmt"
                   inputMode="decimal"
@@ -922,8 +961,8 @@ export function App() {
                   onChange={(e) => setSwapAmount(e.target.value)}
                 />
               </div>
-              <div>
-                <label htmlFor="slip">Slippage (bps)</label>
+              <div className="field">
+                <label htmlFor="slip">Slippage (basis points)</label>
                 <input
                   id="slip"
                   type="number"
@@ -933,9 +972,9 @@ export function App() {
                   onChange={(e) => setSwapSlippageBps(Number(e.target.value) || 100)}
                 />
               </div>
-              <div className="row">
+              <div className="btn-group btn-group--stretch">
                 <button type="button" disabled={swapBusy} onClick={() => void handleQuote()}>
-                  {swapBusy ? "…" : "Get quote"}
+                  {swapBusy ? "…" : "Quote"}
                 </button>
                 <button
                   type="button"
@@ -943,22 +982,27 @@ export function App() {
                   disabled={swapBusy || !swapQuote}
                   onClick={() => void handleSwapConfirm()}
                 >
-                  Confirm swap
+                  Swap
                 </button>
               </div>
               {swapQuote && (
                 <details open>
-                  <summary>Quote (raw)</summary>
-                  <pre className="mono quote-pre">{JSON.stringify(swapQuote, null, 2)}</pre>
+                  <summary>Raw quote</summary>
+                  <div className="details-body">
+                    <pre className="mono quote-pre">{JSON.stringify(swapQuote, null, 2)}</pre>
+                  </div>
                 </details>
               )}
             </div>
           )}
 
           {tab === "activity" && (
-            <div className="stack">
-              <div className="row">
-                <button type="button" disabled={activityBusy} onClick={() => void refreshActivity()}>
+            <div className="card">
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                <div className="section-title" style={{ margin: 0 }}>
+                  Recent activity
+                </div>
+                <button type="button" className="btn-ghost" disabled={activityBusy} onClick={() => void refreshActivity()}>
                   {activityBusy ? "Loading…" : "Refresh"}
                 </button>
               </div>
@@ -966,47 +1010,57 @@ export function App() {
                 {activity.map((row) => (
                   <li key={row.signature}>
                     <a
-                      className="mono"
                       href={`https://solscan.io/tx/${row.signature}${cluster === "devnet" ? "?cluster=devnet" : ""}`}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {row.signature.slice(0, 12)}…
+                      {row.signature.slice(0, 10)}…{row.signature.slice(-6)}
                     </a>
-                    {row.err ? <span className="error"> failed</span> : null}
+                    {row.err ? <span className="error">Failed</span> : <span className="hint">Confirmed</span>}
                   </li>
                 ))}
               </ul>
+              {activity.length === 0 && !activityBusy && (
+                <p className="empty-state" style={{ padding: "1rem 0" }}>
+                  No transactions yet.
+                </p>
+              )}
             </div>
           )}
 
           {tab === "nfts" && (
-            <div className="stack">
+            <div className="card stack">
               {!heliusKey && (
-                <p className="hint">
-                  Add <code className="mono">VITE_HELIUS_API_KEY</code> to <code>.env</code> to load
-                  collectibles (Helius).
+                <p className="hint" style={{ margin: 0 }}>
+                  Set <code>VITE_HELIUS_API_KEY</code> in <code>.env</code> to load collectibles via Helius.
                 </p>
               )}
               {heliusKey && (
                 <>
-                  <button type="button" disabled={nftsBusy} onClick={() => void loadNfts()}>
-                    {nftsBusy ? "Loading…" : "Reload collectibles"}
-                  </button>
+                  <div className="row" style={{ justifyContent: "space-between" }}>
+                    <div className="section-title" style={{ margin: 0 }}>
+                      Collectibles
+                    </div>
+                    <button type="button" className="btn-ghost" disabled={nftsBusy} onClick={() => void loadNfts()}>
+                      {nftsBusy ? "Loading…" : "Reload"}
+                    </button>
+                  </div>
                   <div className="nft-grid">
                     {nfts.map((n) => (
                       <div key={n.id} className="nft-card">
                         {n.image ? (
                           <img src={n.image} alt="" className="nft-img" crossOrigin="anonymous" />
                         ) : (
-                          <div className="nft-placeholder">No image</div>
+                          <div className="nft-placeholder">No preview</div>
                         )}
                         <div className="mono hint">{n.name ?? n.id.slice(0, 8)}</div>
                       </div>
                     ))}
                   </div>
                   {nfts.length === 0 && !nftsBusy && (
-                    <p className="hint">No items returned (or none on this cluster).</p>
+                    <p className="empty-state" style={{ padding: "1rem 0" }}>
+                      No NFTs found for this address.
+                    </p>
                   )}
                 </>
               )}
@@ -1014,67 +1068,87 @@ export function App() {
           )}
 
           {tab === "settings" && (
-            <div className="stack">
+            <div className="stack" style={{ gap: "0.75rem" }}>
               {session?.mode === "mnemonic" && (
                 <details>
-                  <summary>Show recovery phrase</summary>
-                  <p className="hint">Never share or store this in cloud photos or chat apps.</p>
-                  <div className="mono">{session.mnemonic}</div>
+                  <summary>Recovery phrase</summary>
+                  <div className="details-body">
+                    <p className="hint" style={{ marginTop: 0 }}>
+                      Never share or store in cloud photos or chat apps.
+                    </p>
+                    <div className="mnemonic-box">{session.mnemonic}</div>
+                  </div>
                 </details>
               )}
 
               <details>
-                <summary>Export private key (base58)</summary>
-                <p className="hint">Anyone with this key controls this account.</p>
-                <div className="mono">{keypairToSecretBase58(keypair)}</div>
+                <summary>Private key</summary>
+                <div className="details-body">
+                  <p className="hint" style={{ marginTop: 0 }}>
+                    Anyone with this key controls this account.
+                  </p>
+                  <div className="mono" style={{ fontSize: "0.72rem" }}>
+                    {keypairToSecretBase58(keypair)}
+                  </div>
+                </div>
               </details>
 
-              <hr />
-
-              <h2 style={{ fontSize: "1rem", margin: 0 }}>Address book</h2>
-              <div className="row">
-                <input
-                  placeholder="Name"
-                  value={abName}
-                  onChange={(e) => setAbName(e.target.value)}
-                />
-                <input
-                  placeholder="Solana address"
-                  className="mono"
-                  value={abAddr}
-                  onChange={(e) => setAbAddr(e.target.value)}
-                />
-                <button type="button" onClick={addAddressBookEntry}>
+              <div className="card">
+                <div className="section-title">Contacts</div>
+                <div className="field">
+                  <label htmlFor="abName">Name</label>
+                  <input
+                    id="abName"
+                    placeholder="Label"
+                    value={abName}
+                    onChange={(e) => setAbName(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="abAddr">Address</label>
+                  <input
+                    id="abAddr"
+                    placeholder="Solana address"
+                    className="mono"
+                    value={abAddr}
+                    onChange={(e) => setAbAddr(e.target.value)}
+                  />
+                </div>
+                <button type="button" className="primary btn-block" onClick={addAddressBookEntry}>
                   Save contact
                 </button>
+                <ul className="ab-list" style={{ marginTop: "0.75rem" }}>
+                  {addressBook.map((e, i) => (
+                    <li key={e.address + i} className="row ab-item">
+                      <span style={{ fontWeight: 600 }}>{e.name}</span>
+                      <span className="mono hint">{e.address.slice(0, 4)}…{e.address.slice(-4)}</span>
+                      <button type="button" className="btn-ghost" onClick={() => removeAddressBookEntry(i)}>
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="ab-list">
-                {addressBook.map((e, i) => (
-                  <li key={e.address + i} className="row ab-item">
-                    <span>{e.name}</span>
-                    <span className="mono">{e.address.slice(0, 6)}…</span>
-                    <button type="button" onClick={() => removeAddressBookEntry(i)}>
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
 
-              <div className="row">
-                <button type="button" onClick={handleLock}>
-                  Lock
-                </button>
-                <button type="button" className="danger" onClick={handleForget}>
-                  Forget saved wallet
-                </button>
+              <div className="card">
+                <div className="section-title">Session</div>
+                <div className="btn-group btn-group--stretch">
+                  <button type="button" onClick={handleLock}>
+                    Lock
+                  </button>
+                  <button type="button" className="danger" onClick={handleForget}>
+                    Forget wallet
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </>
       )}
 
-      {error && <p className="error">{error}</p>}
-      {status && <p className="success">{status}</p>}
+      {error && <div className="alert alert--error">{error}</div>}
+      {status && <div className="alert alert--success">{status}</div>}
+      </div>
     </div>
   );
 }
