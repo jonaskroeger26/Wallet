@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Connection,
   Keypair,
@@ -42,8 +42,9 @@ import {
 } from "./lib/address-book";
 import { fetchRecentActivity } from "./lib/activity";
 import { fetchNftsHelius } from "./lib/nfts";
-
-type Cluster = "devnet" | "mainnet-beta";
+import type { Cluster } from "./lib/cluster";
+import { WalletShell, type ShellTab } from "./components/WalletShell";
+import { PortfolioHero } from "./components/PortfolioHero";
 
 const RPC: Record<Cluster, string> = {
   devnet: import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim() || clusterApiUrl("devnet"),
@@ -55,20 +56,12 @@ type Session =
   | { mode: "mnemonic"; mnemonic: string; accountIndex: number; keypair: Keypair }
   | { mode: "secret"; keypair: Keypair };
 
-type Tab = "portfolio" | "tokens" | "swap" | "activity" | "nfts" | "settings";
-
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "portfolio", label: "Portfolio", icon: "◈" },
-  { id: "tokens", label: "Tokens", icon: "◇" },
-  { id: "swap", label: "Swap", icon: "⇄" },
-  { id: "activity", label: "Activity", icon: "↗" },
-  { id: "nfts", label: "NFTs", icon: "✦" },
-  { id: "settings", label: "Settings", icon: "⚙" },
-];
-
 export function App() {
   const [cluster, setCluster] = useState<Cluster>("devnet");
-  const [tab, setTab] = useState<Tab>("portfolio");
+  const [tab, setTab] = useState<ShellTab>("portfolio");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
+  const sendSolSectionRef = useRef<HTMLDivElement | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [sessionPassword, setSessionPassword] = useState("");
 
@@ -364,6 +357,8 @@ export function App() {
     setError(null);
     try {
       await navigator.clipboard.writeText(address);
+      setAddressCopied(true);
+      window.setTimeout(() => setAddressCopied(false), 2000);
       setStatus("Address copied.");
     } catch {
       setError("Could not copy (clipboard permission).");
@@ -606,11 +601,20 @@ export function App() {
   const hasEncryptedVault = Boolean(loadEncryptedVault());
   const hasPlainVault = Boolean(loadPlainVault());
 
+  const balanceSolStr =
+    balanceLamports === null
+      ? "—"
+      : (balanceLamports / LAMPORTS_PER_SOL).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 6,
+        });
+
   return (
-    <div className="app">
+    <div className={keypair ? "app app--shell" : "app"}>
       <div className="app__ambient" aria-hidden />
       <div className="app__grid" aria-hidden />
       <div className="app__inner">
+        {!keypair && (
         <header className="app-header">
           <div className="app-header__brand">
             <div className="app-header__logo" aria-hidden />
@@ -621,17 +625,10 @@ export function App() {
               </p>
             </div>
           </div>
-          {keypair && (
-            <span
-              className={
-                cluster === "devnet" ? "badge badge--dev" : "badge badge--live"
-              }
-            >
-              {cluster === "devnet" ? "Devnet" : "Mainnet"}
-            </span>
-          )}
         </header>
+        )}
 
+        {!keypair ? (
         <main className="app-main">
         <div className="card card--network">
           <div className="field">
@@ -653,8 +650,7 @@ export function App() {
           </div>
         </div>
 
-      {!keypair && (
-        <>
+          <>
           {hasEncryptedVault && (
             <div className="card stack mt-gap">
               <div className="section-title">Unlock (password-protected)</div>
@@ -769,43 +765,36 @@ export function App() {
             </div>
           )}
         </>
-      )}
-
-      {keypair && (
-        <>
-          <nav className="tabs" aria-label="Wallet sections">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={tab === t.id ? "tab active" : "tab"}
-                onClick={() => setTab(t.id)}
-                title={t.label}
-              >
-                <span className="tab__icon" aria-hidden>
-                  {t.icon}
-                </span>
-                <span className="tab__text">{t.label}</span>
-              </button>
-            ))}
-          </nav>
-
+        </main>
+        ) : (
+          address && (
+          <WalletShell
+            activeTab={tab}
+            onTabChange={setTab}
+            address={address}
+            copied={addressCopied}
+            onCopyAddress={() => void copyAddress()}
+            cluster={cluster}
+            onClusterChange={setCluster}
+            networkDisabled
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+          >
           {tab === "portfolio" && (
             <div className="stack" style={{ gap: "0.75rem" }}>
+              <PortfolioHero
+                balanceSol={balanceSolStr}
+                balanceLoading={balanceLamports === null}
+                clusterLabel={cluster === "devnet" ? "Devnet" : "Mainnet-beta"}
+                onSend={() =>
+                  sendSolSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                onReceive={() => void copyAddress()}
+                onSwap={() => setTab("swap")}
+                onRefresh={() => void refreshBalance()}
+              />
               <div className="card card--flush">
-                <div className="balance-block">
-                  <div className="balance-block__label">Total balance</div>
-                  <div className="balance-block__value">
-                    {balanceLamports === null
-                      ? "—"
-                      : `${(balanceLamports / LAMPORTS_PER_SOL).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 6,
-                        })}`}
-                  </div>
-                  <div className="balance-block__fiat">SOL · {cluster === "devnet" ? "Devnet" : "Mainnet-beta"}</div>
-                </div>
-                <div className="card__body" style={{ paddingTop: 0 }}>
+                <div className="card__body">
                   <div className="section-title">Receiving address</div>
                   <div className="address-chip">
                     <div className="address-chip__text">{address}</div>
@@ -815,7 +804,7 @@ export function App() {
                   </div>
                   <div className="row" style={{ marginTop: "0.65rem" }}>
                     <button type="button" className="btn-ghost" onClick={() => void refreshBalance()}>
-                      Refresh
+                      Refresh balance
                     </button>
                   </div>
                 </div>
@@ -861,7 +850,7 @@ export function App() {
                 </div>
               )}
 
-              <div className="card">
+              <div className="card" ref={sendSolSectionRef}>
                 <div className="section-title">Send SOL</div>
                 <div className="field">
                   <label htmlFor="to">Recipient</label>
@@ -1096,6 +1085,15 @@ export function App() {
             </div>
           )}
 
+          {tab === "ai" && (
+            <div className="card wallet-ai-placeholder">
+              <div className="section-title">AI Assistant</div>
+              <p className="hint" style={{ margin: 0 }}>
+                Coming soon — context-aware help for balances, swaps, and safety tips.
+              </p>
+            </div>
+          )}
+
           {tab === "settings" && (
             <div className="stack" style={{ gap: "0.75rem" }}>
               {session?.mode === "mnemonic" && (
@@ -1172,10 +1170,9 @@ export function App() {
               </div>
             </div>
           )}
-        </>
-      )}
-
-        </main>
+          </WalletShell>
+          )
+        )}
 
         <div className="toast-stack" role="status" aria-live="polite">
           {error && <div className="toast toast--error">{error}</div>}
