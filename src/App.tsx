@@ -45,6 +45,7 @@ import { WalletShell, type ShellTab } from "./components/WalletShell";
 import { PortfolioHero } from "./components/PortfolioHero";
 import { SwapPanel } from "./components/SwapPanel";
 import { AiAssistant } from "./components/AiAssistant";
+import { BrandMark } from "./components/BrandMark";
 
 const RPC: Record<Cluster, string> = {
   devnet: import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim() || clusterApiUrl("devnet"),
@@ -57,7 +58,7 @@ type Session =
   | { mode: "secret"; keypair: Keypair };
 
 export function App() {
-  const [cluster, setCluster] = useState<Cluster>("devnet");
+  const [cluster, setCluster] = useState<Cluster>("mainnet-beta");
   const [tab, setTab] = useState<ShellTab>("portfolio");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
@@ -528,7 +529,7 @@ export function App() {
         <header className="app-header">
           <div className="app-header__brand">
             <div className="app-header__logo" aria-hidden>
-              <img src="/ownwallet-mark.svg" width={44} height={44} alt="" />
+              <BrandMark className="app-header__logo-img" />
             </div>
             <div className="app-header__titles">
               <h1>OwnWallet</h1>

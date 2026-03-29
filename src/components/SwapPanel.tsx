@@ -53,6 +53,7 @@ const SLIPPAGE_PRESETS = [
   { label: "1%", bps: 100 },
   { label: "3%", bps: 300 },
 ];
+const QUICK_SYMBOLS = ["USDC", "USDT", "JUP", "BONK"];
 
 function shortAddr(a: string) {
   return `${a.slice(0, 4)}…${a.slice(-4)}`;
@@ -323,6 +324,19 @@ export function SwapPanel({
   }, [search, tokenList]);
 
   const mainnetOk = cluster === "mainnet-beta";
+  const quickMints = useMemo(() => {
+    const picks = new Set<string>([NATIVE_MINT_STR, USDC_MINT_MAINNET]);
+    for (const symbol of QUICK_SYMBOLS) {
+      const match = tokenList.find((t) => t.symbol.toUpperCase() === symbol);
+      if (match) picks.add(match.address);
+    }
+    for (const row of tokenRows) {
+      const amount = Number(row.amountUi);
+      if (Number.isFinite(amount) && amount > 0) picks.add(row.mint);
+      if (picks.size >= 7) break;
+    }
+    return Array.from(picks).slice(0, 7);
+  }, [tokenList, tokenRows]);
 
   return (
     <div className="swap-panel">
@@ -339,6 +353,10 @@ export function SwapPanel({
       <div className="swap-card gradient-border glass noise">
         <div className="swap-card__glow swap-card__glow--tl" aria-hidden />
         <div className="swap-card__inner">
+          <div className="swap-card__head">
+            <h3>Token swap</h3>
+            <span className="swap-card__network">{mainnetOk ? "Mainnet live" : "Mainnet required"}</span>
+          </div>
           <div className="swap-section">
             <div className="swap-section__label-row">
               <span className="swap-section__label">You pay</span>
@@ -419,6 +437,23 @@ export function SwapPanel({
               </button>
             </div>
             <div className="swap-token-meta">{nameFor(outMint)}</div>
+            {mainnetOk && quickMints.length > 0 && (
+              <div className="swap-quick">
+                <span className="swap-quick__label">Quick picks</span>
+                <div className="swap-quick__list">
+                  {quickMints.map((mint) => (
+                    <button
+                      key={mint}
+                      type="button"
+                      className={mint === outMint ? "swap-quick__pill swap-quick__pill--on" : "swap-quick__pill"}
+                      onClick={() => setOutMint(mint)}
+                    >
+                      {symbolFor(mint)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="swap-slip">
@@ -489,6 +524,14 @@ export function SwapPanel({
                   <span>Minimum received</span>
                   <span className="swap-details__val">
                     {formatCompactUi(minOutUi)} {symbolFor(outMint)}
+                  </span>
+                </div>
+              )}
+              {Array.isArray(quote.routePlan) && quote.routePlan.length > 0 && (
+                <div className="swap-details__row">
+                  <span>Routes</span>
+                  <span className="swap-details__val">
+                    {quote.routePlan.length} path{quote.routePlan.length > 1 ? "s" : ""}
                   </span>
                 </div>
               )}

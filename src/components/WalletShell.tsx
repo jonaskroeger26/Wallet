@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { Cluster } from "../lib/cluster";
+import { BrandMark } from "./BrandMark";
 
 export type ShellTab =
   | "portfolio"
@@ -99,13 +100,7 @@ export function WalletShell({
       >
         <div className="wallet-sidebar__brand">
           <div className="wallet-sidebar__logo wallet-sidebar__logo--mark">
-            <img
-              src="/ownwallet-mark.svg"
-              width={44}
-              height={44}
-              alt=""
-              className="wallet-sidebar__logo-img"
-            />
+            <BrandMark className="wallet-sidebar__logo-img" />
           </div>
           {!sidebarCollapsed && (
             <div className="wallet-sidebar__titles">
