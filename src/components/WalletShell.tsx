@@ -13,7 +13,6 @@ import {
   Search,
   Settings,
   Sparkles,
-  Wallet,
 } from "lucide-react";
 import type { Cluster } from "../lib/cluster";
 
@@ -99,12 +98,18 @@ export function WalletShell({
         }
       >
         <div className="wallet-sidebar__brand">
-          <div className="wallet-sidebar__logo animated-gradient glow-primary-sm">
-            <Wallet className="wallet-sidebar__logo-icon" strokeWidth={2.2} />
+          <div className="wallet-sidebar__logo wallet-sidebar__logo--mark">
+            <img
+              src="/ownwallet-mark.svg"
+              width={44}
+              height={44}
+              alt=""
+              className="wallet-sidebar__logo-img"
+            />
           </div>
           {!sidebarCollapsed && (
             <div className="wallet-sidebar__titles">
-              <h1 className="gradient-text">Wallet</h1>
+              <h1 className="gradient-text">OwnWallet</h1>
               <p className="wallet-sidebar__subtitle">Solana</p>
             </div>
           )}

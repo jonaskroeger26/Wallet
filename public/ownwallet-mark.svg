@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="ow-title">
+  <title id="ow-title">OwnWallet</title>
+  <defs>
+    <linearGradient id="ow-surface" x1="12" y1="8" x2="116" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f766e"/>
+      <stop offset="0.45" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="ow-card" x1="32" y1="40" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8fafc" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#e0f2fe" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="ow-flap" x1="32" y1="44" x2="88" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <!-- App tile -->
+  <rect width="128" height="128" rx="28" fill="url(#ow-surface)"/>
+  <!-- Bifold wallet body -->
+  <path
+    fill="url(#ow-card)"
+    d="M28 48h72a8 8 0 0 1 8 8v32a8 8 0 0 1-8 8H28a8 8 0 0 1-8-8V56a8 8 0 0 1 8-8Z"
+  />
+  <!-- Top flap -->
+  <path fill="url(#ow-flap)" d="M28 48h72L76 66H28V48Z"/>
+  <!-- O ring (Own)  subtle arc -->
+  <path
+    d="M44 36a40 40 0 0 1 56 56"
+    stroke="rgba(255,255,255,0.28)"
+    stroke-width="5"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Coin / value accent -->
+  <circle cx="86" cy="78" r="14" fill="#0f766e" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+  <circle cx="86" cy="78" r="5.5" fill="#f8fafc"/>
+</svg>

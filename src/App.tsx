@@ -527,9 +527,11 @@ export function App() {
         {!keypair && (
         <header className="app-header">
           <div className="app-header__brand">
-            <div className="app-header__logo" aria-hidden />
+            <div className="app-header__logo" aria-hidden>
+              <img src="/ownwallet-mark.svg" width={44} height={44} alt="" />
+            </div>
             <div className="app-header__titles">
-              <h1>Wallet</h1>
+              <h1>OwnWallet</h1>
               <p className="tagline">
                 Self-custody Solana in your browser. Keys stay on this device; optional password later.
               </p>

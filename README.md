@@ -1,4 +1,4 @@
-# Wallet
+# OwnWallet
 
 Solana web wallet with **Phantom-style** features in the browser: 12-word recovery phrase, HD accounts, SOL + SPL, Jupiter swap, activity history, address book, optional NFT previews (Helius), and an **offline** assistant (no API keys).
 
@@ -42,6 +42,23 @@ Copy `.env.example` to `.env`:
 - **`VITE_HELIUS_API_KEY`** — enables the **Collectibles** tab (NFT list via Helius).
 
 The in-app assistant is **offline** (see `src/lib/local-assistant.ts`) — no cloud AI keys.
+
+### Discord Rich Presence (optional, developers)
+
+The **website cannot** set your Discord status (browsers cannot use Discord’s local connection). For **“Playing OwnWallet”** while you work, use the included **Node** helper — it talks to the **Discord desktop app** on your machine.
+
+1. [Discord Developer Portal](https://discord.com/developers/applications) → **New Application** (e.g. name **OwnWallet**).
+2. Copy **Application ID** into `.env` as `DISCORD_CLIENT_ID` (this ID is **public**, not a secret).
+3. Optional: **Rich Presence → Art Assets** → upload a 512×512 image; set `DISCORD_ASSET_KEY` to that asset’s name (e.g. `logo`).
+4. Keep **Discord desktop** running, then:
+
+```bash
+npm run discord:presence          # status only
+# or
+npm run dev:discord             # Vite dev server + presence together
+```
+
+Customize lines with `DISCORD_PRESENCE_DETAILS`, `DISCORD_PRESENCE_STATE`, and optional `DISCORD_ASSET_TEXT` (see `.env.example`).
 
 ## Build & quality checks
 
