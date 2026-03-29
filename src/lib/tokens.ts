@@ -11,11 +11,12 @@ export type ParsedTokenRow = {
 };
 
 let jupiterTokenCache: Map<string, { symbol: string; name: string; decimals: number }> | null = null;
+const TOKEN_LIST_OVERRIDE = import.meta.env.VITE_TOKEN_LIST_URL?.trim();
 const TOKEN_LIST_URLS = [
-  "https://token.jup.ag/strict",
-  "https://token.jup.ag/all",
+  ...(TOKEN_LIST_OVERRIDE ? [TOKEN_LIST_OVERRIDE] : []),
   "https://cache.jup.ag/tokens",
   "https://raw.githubusercontent.com/solana-labs/token-list/main/src/tokens/solana.tokenlist.json",
+  "https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json",
 ];
 
 type TokenLike = {
