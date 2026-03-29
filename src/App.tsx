@@ -53,6 +53,54 @@ const RPC: Record<Cluster, string> = {
     import.meta.env.VITE_SOLANA_RPC_MAINNET?.trim() || clusterApiUrl("mainnet-beta"),
 };
 
+function rpcCandidatesFor(cluster: Cluster): string[] {
+  const configured =
+    cluster === "mainnet-beta"
+      ? import.meta.env.VITE_SOLANA_RPC_MAINNET?.trim()
+      : import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim();
+  const defaults =
+    cluster === "mainnet-beta"
+      ? [clusterApiUrl("mainnet-beta"), "https://api.mainnet-beta.solana.com"]
+      : [clusterApiUrl("devnet"), "https://api.devnet.solana.com"];
+  const out: string[] = [];
+  for (const u of [configured, ...defaults]) {
+    if (!u) continue;
+    if (!out.includes(u)) out.push(u);
+  }
+  return out;
+}
+
+function shouldTryNextRpc(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes("403") ||
+    msg.includes("forbidden") ||
+    msg.includes("429") ||
+    msg.includes("too many requests") ||
+    msg.includes("503") ||
+    msg.includes("502") ||
+    msg.includes("network") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("timeout")
+  );
+}
+
+function hostFromUrl(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+function formatRpcReadError(err: unknown, urls: string[]): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (shouldTryNextRpc(err)) {
+    return `RPC access failed (${raw}). Tried: ${urls.map(hostFromUrl).join(", ")}. Check VITE_SOLANA_RPC_* or use a public/mainnet-enabled endpoint.`;
+  }
+  return raw;
+}
+
 type Session =
   | { mode: "mnemonic"; mnemonic: string; accountIndex: number; keypair: Keypair }
   | { mode: "secret"; keypair: Keypair };
@@ -102,21 +150,51 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [airdropBusy, setAirdropBusy] = useState(false);
 
-  const connection = useMemo(() => new Connection(RPC[cluster], "confirmed"), [cluster]);
+  const rpcCandidates = useMemo(() => rpcCandidatesFor(cluster), [cluster]);
+  const [rpcIndex, setRpcIndex] = useState(0);
+  useEffect(() => {
+    setRpcIndex(0);
+  }, [cluster]);
+  const activeRpc = rpcCandidates[Math.min(rpcIndex, rpcCandidates.length - 1)] ?? RPC[cluster];
+  const connection = useMemo(() => new Connection(activeRpc, "confirmed"), [activeRpc]);
   const keypair = session?.keypair ?? null;
   const address = keypair ? keypair.publicKey.toBase58() : null;
   const heliusKey = import.meta.env.VITE_HELIUS_API_KEY?.trim();
+
+  const withReadRpcFallback = useCallback(
+    async <T,>(run: (conn: Connection) => Promise<T>) => {
+      let lastErr: unknown = null;
+      for (let offset = 0; offset < rpcCandidates.length; offset += 1) {
+        const idx = (rpcIndex + offset) % rpcCandidates.length;
+        const url = rpcCandidates[idx];
+        const conn = idx === rpcIndex ? connection : new Connection(url, "confirmed");
+        try {
+          const value = await run(conn);
+          if (idx !== rpcIndex) {
+            setRpcIndex(idx);
+            setStatus(`RPC fallback active: ${hostFromUrl(url)}`);
+          }
+          return value;
+        } catch (e) {
+          lastErr = e;
+          if (!shouldTryNextRpc(e)) break;
+        }
+      }
+      throw new Error(formatRpcReadError(lastErr, rpcCandidates));
+    },
+    [connection, rpcCandidates, rpcIndex]
+  );
 
   const refreshBalance = useCallback(async () => {
     if (!keypair) return;
     setError(null);
     try {
-      const lamports = await connection.getBalance(keypair.publicKey);
+      const lamports = await withReadRpcFallback((conn) => conn.getBalance(keypair.publicKey));
       setBalanceLamports(lamports);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [connection, keypair]);
+  }, [keypair, withReadRpcFallback]);
 
   const refreshTokens = useCallback(async () => {
     if (!keypair) return;
@@ -125,28 +203,28 @@ export function App() {
     try {
       const map = await loadJupiterTokenMap();
       setJupMeta(map);
-      const rows = await fetchSplTokenRows(connection, keypair.publicKey);
+      const rows = await withReadRpcFallback((conn) => fetchSplTokenRows(conn, keypair.publicKey));
       setTokenRows(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setTokensBusy(false);
     }
-  }, [connection, keypair]);
+  }, [keypair, withReadRpcFallback]);
 
   const refreshActivity = useCallback(async () => {
     if (!keypair) return;
     setActivityBusy(true);
     setError(null);
     try {
-      const rows = await fetchRecentActivity(connection, keypair.publicKey, 25);
+      const rows = await withReadRpcFallback((conn) => fetchRecentActivity(conn, keypair.publicKey, 25));
       setActivity(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setActivityBusy(false);
     }
-  }, [connection, keypair]);
+  }, [keypair, withReadRpcFallback]);
 
   useEffect(() => {
     void refreshBalance();
