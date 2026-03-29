@@ -44,6 +44,7 @@ import type { Cluster } from "./lib/cluster";
 import { WalletShell, type ShellTab } from "./components/WalletShell";
 import { PortfolioHero } from "./components/PortfolioHero";
 import { SwapPanel } from "./components/SwapPanel";
+import { AiAssistant } from "./components/AiAssistant";
 
 const RPC: Record<Cluster, string> = {
   devnet: import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim() || clusterApiUrl("devnet"),
@@ -942,13 +943,14 @@ export function App() {
             </div>
           )}
 
-          {tab === "ai" && (
-            <div className="card wallet-ai-placeholder">
-              <div className="section-title">AI Assistant</div>
-              <p className="hint" style={{ margin: 0 }}>
-                Coming soon — context-aware help for balances, swaps, and safety tips.
-              </p>
-            </div>
+          {tab === "ai" && address && (
+            <AiAssistant
+              cluster={cluster}
+              publicAddress={address}
+              balanceLamports={balanceLamports}
+              tokenCount={tokenRows.length}
+              sessionMode={session?.mode ?? null}
+            />
           )}
 
           {tab === "settings" && (
