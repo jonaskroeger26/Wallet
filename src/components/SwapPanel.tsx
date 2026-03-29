@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  clusterApiUrl,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -54,6 +55,46 @@ const SLIPPAGE_PRESETS = [
   { label: "3%", bps: 300 },
 ];
 const QUICK_SYMBOLS = ["USDC", "USDT", "JUP", "BONK"];
+
+function rpcCandidatesFor(cluster: Cluster): string[] {
+  const configured =
+    cluster === "mainnet-beta"
+      ? import.meta.env.VITE_SOLANA_RPC_MAINNET?.trim()
+      : import.meta.env.VITE_SOLANA_RPC_DEVNET?.trim();
+  const defaults =
+    cluster === "mainnet-beta"
+      ? [clusterApiUrl("mainnet-beta"), "https://api.mainnet-beta.solana.com"]
+      : [clusterApiUrl("devnet"), "https://api.devnet.solana.com"];
+  const out: string[] = [];
+  for (const u of [configured, ...defaults]) {
+    if (!u) continue;
+    if (!out.includes(u)) out.push(u);
+  }
+  return out;
+}
+
+function shouldTryNextRpc(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes("403") ||
+    msg.includes("forbidden") ||
+    msg.includes("429") ||
+    msg.includes("too many requests") ||
+    msg.includes("503") ||
+    msg.includes("502") ||
+    msg.includes("network") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("timeout")
+  );
+}
+
+function hostFromUrl(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
 
 function shortAddr(a: string) {
   return `${a.slice(0, 4)}…${a.slice(-4)}`;
@@ -277,6 +318,8 @@ export function SwapPanel({
     return `1 ${symbolFor(inMint)} ≈ ${formatCompactUi(String(perIn))} ${symbolFor(outMint)}`;
   }, [amountStr, metaMap.size, outDecimals, quote, symbolFor, inMint, outMint]);
 
+  const rpcCandidates = useMemo(() => rpcCandidatesFor(cluster), [cluster]);
+
   async function onConfirmSwap() {
     if (!quote || !isJupiterQuote(quote)) return;
     setSwapSubmitting(true);
@@ -286,19 +329,33 @@ export function SwapPanel({
       const { swapTransaction } = await getSwapTransaction(quote, keypair.publicKey.toBase58());
       const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
       tx.sign([keypair]);
-      const sig = await connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        maxRetries: 3,
-      });
-      const latest = await connection.getLatestBlockhash("confirmed");
-      await connection.confirmTransaction(
-        {
-          signature: sig,
-          blockhash: latest.blockhash,
-          lastValidBlockHeight: latest.lastValidBlockHeight,
-        },
-        "confirmed"
-      );
+      const rawTx = tx.serialize();
+      let sig: string | null = null;
+      let lastErr: unknown = null;
+      for (let i = 0; i < rpcCandidates.length; i += 1) {
+        const url = rpcCandidates[i];
+        const conn = i === 0 ? connection : new Connection(url, "confirmed");
+        try {
+          sig = await conn.sendRawTransaction(rawTx, {
+            skipPreflight: false,
+            maxRetries: 3,
+          });
+          await conn.confirmTransaction(sig, "confirmed");
+          if (i > 0) {
+            setStatus(`Swap sent via fallback RPC: ${hostFromUrl(url)} · ${sig.slice(0, 8)}…`);
+          }
+          break;
+        } catch (e) {
+          lastErr = e;
+          if (!shouldTryNextRpc(e)) throw e;
+        }
+      }
+      if (!sig) {
+        const hosts = rpcCandidates.map(hostFromUrl).join(", ");
+        throw new Error(
+          `Swap submission failed across RPC endpoints (${hosts}). ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`
+        );
+      }
       setStatus(`Swap confirmed · ${sig.slice(0, 8)}…`);
       setQuote(null);
       setAmountStr("");
